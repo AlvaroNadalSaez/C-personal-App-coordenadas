@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Distancia entre Coordenadas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #5b6474;
+      --border: #dde3ee;
+      --accent: #0f766e;
+      --accent-soft: #d8f0ee;
+      --pcr: #1d4ed8;
+      --contador: #16a34a;
+      --linea: #f97316;
+      --shadow: 0 12px 28px rgba(31, 41, 55, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, #e7f6ff 0%, transparent 35%),
+        radial-gradient(circle at 90% 100%, #e8fff2 0%, transparent 35%),
+        var(--bg);
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.55rem;
+      letter-spacing: 0.2px;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .upload-box {
+      border: 2px dashed #b8c4d8;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      background: #fcfdff;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+      display: block;
+    }
+
+    .upload-box:hover {
+      border-color: var(--accent);
+      background: #f4fbfa;
+    }
+
+    .upload-title {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .upload-subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .file-name {
+      margin-top: 10px;
+      display: inline-block;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid #b8dfdb;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.85rem;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .status {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .metric-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-bottom: 14px;
+    }
+
+    .metric-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fdfefe;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .slider-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .slider-row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .slider-value {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    #map {
+      height: 520px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .leaflet-control.legend {
+      background: #ffffff;
+      border: 1px solid #d9e1ee;
+      border-radius: 10px;
+      padding: 8px 10px;
+      box-shadow: 0 8px 18px rgba(31, 41, 55, 0.15);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+      color: #2b3444;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    .dot.pcr {
+      background: var(--pcr);
+    }
+
+    .dot.contador {
+      background: var(--contador);
+    }
+
+    .line {
+      width: 18px;
+      border-top: 2px dashed var(--linea);
+      display: inline-block;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: #f7f9fd;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 900px) {
+      #map {
+        height: 420px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        padding: 12px;
+      }
+
+      #map {
+        height: 340px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <h1>Distancia PCR vs Contador</h1>
+      <p class="subtitle">Carga un CSV para calcular distancias, filtrar por metros y visualizar clientes en el mapa.</p>
+    </section>
+
+    <section class="panel">
+      <label class="upload-box" for="csvFile">
+        <span class="upload-title">Seleccionar archivo CSV</span>
+        <span class="upload-subtitle">Formato esperado: <code>nombre,latitud,longitud</code></span>
+        <span class="file-name" id="fileName">Ningún archivo seleccionado</span>
+      </label>
+      <input id="csvFile" type="file" accept=".csv,text/csv" hidden />
+      <p class="status" id="statusMessage">Esperando archivo...</p>
+    </section>
+
+    <section class="panel">
+      <div class="metric-grid">
+        <article class="metric-card">
+          <div class="metric-label">Clientes totales</div>
+          <div class="metric-value" id="totalClients">0</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-label">Clientes filtrados</div>
+          <div class="metric-value" id="filteredClients">0</div>
+        </article>
+      </div>
+
+      <div class="slider-grid">
+        <div class="slider-row">
+          <label class="slider-label" for="minDistance">
+            <span>Distancia mínima</span>
+            <span class="slider-value" id="minDistanceValue">0 m</span>
+          </label>
+          <input id="minDistance" type="range" min="0" max="0" value="0" disabled />
+        </div>
+
+        <div class="slider-row">
+          <label class="slider-label" for="maxDistance">
+            <span>Distancia máxima</span>
+            <span class="slider-value" id="maxDistanceValue">0 m</span>
+          </label>
+          <input id="maxDistance" type="range" min="0" max="0" value="0" disabled />
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div id="map"></div>
+    </section>
+
+    <section class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Distancia (m)</th>
+              <th>PCR (Lat, Lon)</th>
+              <th>Contador (Lat, Lon)</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr>
+              <td colspan="4" class="muted">Carga un archivo CSV para ver resultados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script>
+    "use strict";
+
+    const state = {
+      allClients: [],
+      filteredClients: [],
+      map: null,
+      layerGroup: null
+    };
+
+    const ui = {
+      csvFile: document.getElementById("csvFile"),
+      fileName: document.getElementById("fileName"),
+      statusMessage: document.getElementById("statusMessage"),
+      totalClients: document.getElementById("totalClients"),
+      filteredClients: document.getElementById("filteredClients"),
+      minDistance: document.getElementById("minDistance"),
+      maxDistance: document.getElementById("maxDistance"),
+      minDistanceValue: document.getElementById("minDistanceValue"),
+      maxDistanceValue: document.getElementById("maxDistanceValue"),
+      resultsBody: document.getElementById("resultsBody")
+    };
+
+    function initMap() {
+      state.map = L.map("map", { preferCanvas: true }).setView([36.24, -6.06], 13);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(state.map);
+
+      state.layerGroup = L.layerGroup().addTo(state.map);
+      addLegendControl();
+    }
+
+    function addLegendControl() {
+      const legend = L.control({ position: "bottomleft" });
+      legend.onAdd = function () {
+        const div = L.DomUtil.create("div", "leaflet-control legend");
+        div.innerHTML = [
+          "<div class='legend-row'><span class='dot pcr'></span><span>PCR</span></div>",
+          "<div class='legend-row'><span class='dot contador'></span><span>Contador</span></div>",
+          "<div class='legend-row'><span class='line'></span><span>Línea de distancia</span></div>"
+        ].join("");
+        return div;
+      };
+      legend.addTo(state.map);
+    }
+
+    function setStatus(message) {
+      ui.statusMessage.textContent = message;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function parseCoordinate(rawValue) {
+      if (rawValue === null || rawValue === undefined) {
+        return Number.NaN;
+      }
+      const normalized = String(rawValue).trim().replace(",", ".");
+      return Number.parseFloat(normalized);
+    }
+
+    function extractClientInfo(rawName) {
+      const cleanName = String(rawName || "").trim();
+      const clientMatch = cleanName.match(/cliente\s+(\d+)/i);
+      const typeMatch = cleanName.match(/-\s*(pcr|contador)\s*$/i);
+
+      const clientId = clientMatch
+        ? clientMatch[1]
+        : cleanName.replace(/\s*-\s*(pcr|contador)\s*$/i, "").toLowerCase();
+
+      const displayName = clientMatch
+        ? "Cliente " + clientMatch[1]
+        : cleanName.replace(/\s*-\s*(pcr|contador)\s*$/i, "").trim();
+
+      return {
+        id: clientId,
+        displayName,
+        type: typeMatch ? typeMatch[1].toUpperCase() : null
+      };
+    }
+
+    function haversineMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const toRad = Math.PI / 180;
+      const dLat = (lat2 - lat1) * toRad;
+      const dLon = (lon2 - lon1) * toRad;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function setSlidersEnabled(enabled) {
+      ui.minDistance.disabled = !enabled;
+      ui.maxDistance.disabled = !enabled;
+    }
+
+    function configureSliders(maxDistance) {
+      const maxRange = Math.max(1, Math.ceil(maxDistance));
+      ui.minDistance.min = "0";
+      ui.minDistance.max = String(maxRange);
+      ui.minDistance.value = "0";
+
+      ui.maxDistance.min = "0";
+      ui.maxDistance.max = String(maxRange);
+      ui.maxDistance.value = String(maxRange);
+
+      updateSliderLabels();
+      setSlidersEnabled(true);
+    }
+
+    function updateSliderLabels() {
+      ui.minDistanceValue.textContent = Math.round(Number(ui.minDistance.value)) + " m";
+      ui.maxDistanceValue.textContent = Math.round(Number(ui.maxDistance.value)) + " m";
+    }
+
+    function onSliderInput(source) {
+      let min = Number(ui.minDistance.value);
+      let max = Number(ui.maxDistance.value);
+
+      if (source === "min" && min > max) {
+        max = min;
+        ui.maxDistance.value = String(max);
+      }
+      if (source === "max" && max < min) {
+        min = max;
+        ui.minDistance.value = String(min);
+      }
+
+      updateSliderLabels();
+      applyFilters();
+    }
+
+    function processRows(rows) {
+      const groups = new Map();
+      let skippedRows = 0;
+
+      rows.forEach((row) => {
+        const rawName = row.nombre ?? row.Nombre;
+        const lat = parseCoordinate(row.latitud ?? row.Latitud);
+        const lon = parseCoordinate(row.longitud ?? row.Longitud);
+
+        if (!rawName || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+          skippedRows += 1;
+          return;
+        }
+
+        const info = extractClientInfo(rawName);
+        if (!info.id || !info.type) {
+          skippedRows += 1;
+          return;
+        }
+
+        if (!groups.has(info.id)) {
+          groups.set(info.id, {
+            id: info.id,
+            name: info.displayName,
+            pcr: null,
+            contador: null
+          });
+        }
+
+        const entry = groups.get(info.id);
+        const point = { lat, lon, rawName: String(rawName).trim() };
+
+        if (info.type === "PCR") {
+          entry.pcr = point;
+        } else if (info.type === "CONTADOR") {
+          entry.contador = point;
+        }
+      });
+
+      const completeClients = Array.from(groups.values())
+        .filter((client) => client.pcr && client.contador)
+        .map((client) => ({
+          ...client,
+          distance: haversineMeters(
+            client.pcr.lat,
+            client.pcr.lon,
+            client.contador.lat,
+            client.contador.lon
+          )
+        }))
+        .sort((a, b) => {
+          const aNum = Number.parseInt(a.id, 10);
+          const bNum = Number.parseInt(b.id, 10);
+          if (Number.isFinite(aNum) && Number.isFinite(bNum)) {
+            return aNum - bNum;
+          }
+          return a.name.localeCompare(b.name, "es");
+        });
+
+      state.allClients = completeClients;
+
+      if (completeClients.length === 0) {
+        state.filteredClients = [];
+        setSlidersEnabled(false);
+        ui.totalClients.textContent = "0";
+        ui.filteredClients.textContent = "0";
+        state.layerGroup.clearLayers();
+        renderTable();
+        setStatus("No se encontraron clientes completos (PCR + Contador) en el CSV.");
+        return;
+      }
+
+      const maxDistance = Math.max(...completeClients.map((client) => client.distance));
+      configureSliders(maxDistance);
+      applyFilters();
+
+      const parsedRows = rows.length;
+      const incompleteClients = groups.size - completeClients.length;
+      setStatus(
+        "Archivo cargado: " +
+        completeClients.length +
+        " clientes válidos. Filas ignoradas: " +
+        skippedRows +
+        ". Clientes incompletos: " +
+        Math.max(0, incompleteClients) +
+        ". Registros parseados: " +
+        parsedRows +
+        "."
+      );
+    }
+
+    function renderTable() {
+      ui.resultsBody.innerHTML = "";
+
+      if (state.filteredClients.length === 0) {
+        ui.resultsBody.innerHTML =
+          "<tr><td colspan='4' class='muted'>No hay clientes en el rango seleccionado.</td></tr>";
+        return;
+      }
+
+      const rowsHtml = state.filteredClients.map((client) => {
+        return (
+          "<tr>" +
+            "<td>" + escapeHtml(client.name) + "</td>" +
+            "<td>" + Math.round(client.distance) + "</td>" +
+            "<td>" + client.pcr.lat.toFixed(6) + ", " + client.pcr.lon.toFixed(6) + "</td>" +
+            "<td>" + client.contador.lat.toFixed(6) + ", " + client.contador.lon.toFixed(6) + "</td>" +
+          "</tr>"
+        );
+      }).join("");
+
+      ui.resultsBody.innerHTML = rowsHtml;
+    }
+
+    function renderMap() {
+      state.layerGroup.clearLayers();
+
+      if (state.filteredClients.length === 0) {
+        return;
+      }
+
+      const allLatLngs = [];
+
+      state.filteredClients.forEach((client) => {
+        const pcrLatLng = [client.pcr.lat, client.pcr.lon];
+        const contadorLatLng = [client.contador.lat, client.contador.lon];
+        allLatLngs.push(pcrLatLng, contadorLatLng);
+
+        L.polyline([pcrLatLng, contadorLatLng], {
+          color: "#f97316",
+          weight: 2.5,
+          dashArray: "6 6",
+          opacity: 0.95
+        })
+          .addTo(state.layerGroup)
+          .bindPopup(
+            "<strong>" + escapeHtml(client.name) + "</strong><br>" +
+            "Distancia: " + Math.round(client.distance) + " m"
+          );
+
+        L.circleMarker(pcrLatLng, {
+          radius: 7,
+          color: "#1d4ed8",
+          fillColor: "#1d4ed8",
+          fillOpacity: 0.9,
+          weight: 2
+        })
+          .addTo(state.layerGroup)
+          .bindPopup(
+            "<strong>" + escapeHtml(client.name) + "</strong><br>" +
+            "Tipo: PCR<br>" +
+            "Coordenadas: " + client.pcr.lat.toFixed(6) + ", " + client.pcr.lon.toFixed(6)
+          );
+
+        L.circleMarker(contadorLatLng, {
+          radius: 7,
+          color: "#16a34a",
+          fillColor: "#16a34a",
+          fillOpacity: 0.9,
+          weight: 2
+        })
+          .addTo(state.layerGroup)
+          .bindPopup(
+            "<strong>" + escapeHtml(client.name) + "</strong><br>" +
+            "Tipo: Contador<br>" +
+            "Coordenadas: " + client.contador.lat.toFixed(6) + ", " + client.contador.lon.toFixed(6)
+          );
+      });
+
+      const bounds = L.latLngBounds(allLatLngs);
+      state.map.fitBounds(bounds, { padding: [30, 30], maxZoom: 18 });
+    }
+
+    function applyFilters() {
+      const min = Number(ui.minDistance.value);
+      const max = Number(ui.maxDistance.value);
+
+      state.filteredClients = state.allClients.filter(
+        (client) => client.distance >= min && client.distance <= max
+      );
+
+      ui.totalClients.textContent = String(state.allClients.length);
+      ui.filteredClients.textContent = String(state.filteredClients.length);
+
+      renderMap();
+      renderTable();
+    }
+
+    function handleFileSelection(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) {
+        return;
+      }
+
+      ui.fileName.textContent = file.name;
+      setStatus("Procesando CSV...");
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function (results) {
+          processRows(results.data || []);
+        },
+        error: function (error) {
+          setStatus("No se pudo leer el CSV: " + error.message);
+        }
+      });
+    }
+
+    function bindEvents() {
+      ui.csvFile.addEventListener("change", handleFileSelection);
+      ui.minDistance.addEventListener("input", function () {
+        onSliderInput("min");
+      });
+      ui.maxDistance.addEventListener("input", function () {
+        onSliderInput("max");
+      });
+    }
+
+    initMap();
+    bindEvents();
+  </script>
+</body>
+</html>
